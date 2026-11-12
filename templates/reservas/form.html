@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card shadow-sm col-md-6 mx-auto">
+    <div class="card-header bg-primary text-white fw-bold">
+        {{ 'Editar Reserva' if reserva else 'Nueva Reserva de Libro' }}
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label">Estudiante</label>
+                <select name="id_estudiante" class="form-select" required>
+                    <option value="">-- Seleccione un estudiante --</option>
+                    {% for e in estudiantes %}
+                    <option value="{{ e.id_estudiante }}" {% if reserva and reserva.id_estudiante == e.id_estudiante %}selected{% endif %}>
+                        {{ e.codigo_estudiantil }} - {{ e.nombre }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Libro</label>
+                <select name="id_libro" class="form-select" required>
+                    <option value="">-- Seleccione un libro --</option>
+                    {% for l in libros %}
+                    <option value="{{ l.id_libro }}" {% if reserva and reserva.id_libro == l.id_libro %}selected{% endif %}>
+                        {{ l.titulo }} (Disponibles: {{ l.stock_disponible }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if reserva %}
+            <div class="mb-3">
+                <label class="form-label">Estado</label>
+                <select name="estado" class="form-select" required>
+                    <option value="Pendiente" {% if reserva.estado == 'Pendiente' %}selected{% endif %}>Pendiente</option>
+                    <option value="Reclamado" {% if reserva.estado == 'Reclamado' %}selected{% endif %}>Reclamado</option>
+                    <option value="Devuelto" {% if reserva.estado == 'Devuelto' %}selected{% endif %}>Devuelto</option>
+                </select>
+            </div>
+            {% endif %}
+            <button type="submit" class="btn btn-success">Guardar</button>
+            <a href="{{ url_for('reservas.listar') }}" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

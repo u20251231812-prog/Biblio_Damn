@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Estudiantes</h3>
+    <a href="{{ url_for('estudiantes.crear') }}" class="btn btn-primary">+ Nuevo Estudiante</a>
+</div>
+<table class="table table-bordered table-striped bg-white shadow-sm">
+    <thead class="table-dark">
+        <tr>
+            <th>ID</th>
+            <th>Código</th>
+            <th>Nombre</th>
+            <th>Correo</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for e in estudiantes %}
+        <tr>
+            <td>{{ e.id_estudiante }}</td>
+            <td>{{ e.codigo_estudiantil }}</td>
+            <td>{{ e.nombre }}</td>
+            <td>{{ e.correo }}</td>
+            <td>
+                <a href="{{ url_for('estudiantes.editar', id=e.id_estudiante) }}" class="btn btn-sm btn-warning">Editar</a>
+                <form action="{{ url_for('estudiantes.eliminar', id=e.id_estudiante) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Seguro que deseas eliminar este estudiante?');">
+                    <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

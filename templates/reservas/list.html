@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Historial de Reservas</h3>
+    <div>
+        <a href="{{ url_for('reservas.escanear_qr') }}" class="btn btn-warning me-2">📷 Validar QR</a>
+        <a href="{{ url_for('reservas.crear') }}" class="btn btn-primary">+ Nueva Reserva</a>
+    </div>
+</div>
+<table class="table table-bordered table-striped bg-white shadow-sm align-middle">
+    <thead class="table-dark">
+        <tr>
+            <th>ID</th>
+            <th>Estudiante</th>
+            <th>Libro</th>
+            <th>Código QR</th>
+            <th>Estado</th>
+            <th>Fecha</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in reservas %}
+        <tr>
+            <td>{{ r.id_reserva }}</td>
+            <td>{{ r.estudiante_nombre }}</td>
+            <td>{{ r.libro_titulo }}</td>
+            <td><code>{{ r.codigo_qr }}</code></td>
+            <td>
+                <span class="badge {% if r.estado == 'Pendiente' %}bg-warning text-dark{% elif r.estado == 'Reclamado' %}bg-success{% else %}bg-secondary{% endif %}">
+                    {{ r.estado }}
+                </span>
+            </td>
+            <td>{{ r.fecha_reserva.strftime('%Y-%m-%d %H:%M') if r.fecha_reserva else '' }}</td>
+            <td>
+                <a href="{{ url_for('reservas.editar', id=r.id_reserva) }}" class="btn btn-sm btn-warning">Editar</a>
+                <form action="{{ url_for('reservas.eliminar', id=r.id_reserva) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Seguro que deseas eliminar esta reserva?');">
+                    <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
