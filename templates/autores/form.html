@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card shadow-sm col-md-6 mx-auto">
+    <div class="card-header bg-primary text-white fw-bold">
+        {{ 'Editar Autor' if autor else 'Nuevo Autor' }}
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label">Nombre del Autor</label>
+                <input type="text" name="nombre" class="form-control" value="{{ autor.nombre if autor else '' }}" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Nacionalidad</label>
+                <input type="text" name="nacionalidad" class="form-control" value="{{ autor.nacionalidad if autor else '' }}" required>
+            </div>
+            <button type="submit" class="btn btn-success">Guardar</button>
+            <a href="{{ url_for('autores.listar') }}" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
