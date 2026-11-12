@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>Gestión de Libros</h3>
+    <h3 class="fw-bold mb-0">Gestión de Libros</h3>
     <a href="{{ url_for('libros.crear') }}" class="btn btn-primary">+ Nuevo Libro</a>
 </div>
 <table class="table table-bordered table-striped bg-white shadow-sm align-middle">
@@ -20,10 +20,16 @@
         {% for l in libros %}
         <tr>
             <td>{{ l.id_libro }}</td>
-            <td><img src="{{ l.portada_url }}" alt="Portada" style="height: 55px; width: 40px; object-fit: cover;"></td>
-            <td>{{ l.titulo }}</td>
+            <td class="text-center">
+                <img src="{{ l.portada_url }}"
+                     onerror="this.onerror=null; this.src='https://placehold.co/80x110/1e293b/ffffff?text=Libro';"
+                     alt="{{ l.titulo }}"
+                     class="rounded shadow-sm"
+                     style="height: 55px; width: 40px; object-fit: cover;">
+            </td>
+            <td class="fw-medium">{{ l.titulo }}</td>
             <td>{{ l.autor_nombre }}</td>
-            <td>{{ l.categoria_nombre }}</td>
+            <td><span class="badge bg-secondary">{{ l.categoria_nombre }}</span></td>
             <td>{{ l.stock_disponible }}</td>
             <td>
                 <a href="{{ url_for('libros.editar', id=l.id_libro) }}" class="btn btn-sm btn-warning">Editar</a>
