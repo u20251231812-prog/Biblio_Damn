@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <!-- Columna Izquierda: Catálogo de Libros con Portada -->
+    <div class="col-md-8">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3>Catálogo de Libros y Reservas</h3>
+            <a href="{{ url_for('reservas.crear') }}" class="btn btn-primary">+ Nueva Reserva</a>
+        </div>
+        <div class="row row-cols-1 row-cols-md-3 g-3">
+            {% for libro in libros %}
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <img src="{{ libro.portada_url }}" class="card-img-top" style="height: 220px; object-fit: cover;" alt="Portada">
+                    <div class="card-body">
+                        <h6 class="card-title fw-bold">{{ libro.titulo }}</h6>
+                        <p class="card-text text-muted small mb-1">{{ libro.autor_nombre }}</p>
+                        <span class="badge bg-secondary mb-2">{{ libro.categoria_nombre }}</span>
+                        <p class="small text-success fw-bold mb-2">Disponibles: {{ libro.stock_disponible }}</p>
+                        <a href="{{ url_for('reservas.crear') }}" class="btn btn-sm btn-primary w-100">Reservar</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Columna Derecha: Mis Reservas Activas y Código QR -->
+    <div class="col-md-4">
+        <div class="card shadow-sm border-primary">
+            <div class="card-header bg-primary text-white fw-bold">Mis Reservas Activas (QR)</div>
+            <div class="card-body text-center">
+                {% for res in reservas_activas %}
+                <div class="border rounded p-3 mb-3 bg-white">
+                    <h6 class="fw-bold mb-1">{{ res.libro_titulo }}</h6>
+                    <p class="small text-muted mb-2">Estudiante: {{ res.estudiante_nombre }}</p>
+                    <span class="badge bg-success mb-2">Reserva Confirmada - Recoger</span>
+                    <div class="my-2">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ res.codigo_qr }}" alt="QR">
+                    </div>
+                    <p class="fw-bold text-dark mb-0">{{ res.codigo_qr }}</p>
+                    <small class="text-muted">Presenta este QR en biblioteca</small>
+                </div>
+                {% else %}
+                <p class="text-muted">No hay reservas pendientes por reclamar.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
