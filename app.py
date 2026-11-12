@@ -48,4 +48,4 @@ def index():
     return render_template("index.html", libros=libros, reservas_activas=reservas_activas)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False)
