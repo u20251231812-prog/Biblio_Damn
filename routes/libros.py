@@ -4,6 +4,58 @@ from db import get_db_connection
 
 libros_bp = Blueprint("libros", __name__)
 
+##Agregar Busqueda por filtros 
+ORDENES = {
+    "recientes": "l.id_libro DESC",
+    "titulo": "l.titulo ASC",
+    "autor": "a.nombre ASC",
+    "disponibles": "l.stock_disponible DESC",
+}
+
+def buscar_libros(q="", id_categoria=None, id_autor=None,
+                  solo_disponibles=False, orden="recientes"):
+    sql = """
+        SELECT l.*, a.nombre AS autor_nombre, c.nombre AS categoria_nombre
+        FROM libros l
+        JOIN autores a ON l.id_autor = a.id_autor
+        JOIN categorias c ON l.id_categoria = c.id_categoria
+        WHERE 1=1
+    """
+    params = []
+    if q:
+        sql += " AND (l.titulo ILIKE %s OR a.nombre ILIKE %s)"
+        params += [f"%{q}%", f"%{q}%"]
+    if id_categoria:
+        sql += " AND l.id_categoria = %s"
+        params.append(id_categoria)
+    if id_autor:
+        sql += " AND l.id_autor = %s"
+        params.append(id_autor)
+    if solo_disponibles:
+        sql += " AND l.stock_disponible > 0"
+    sql += " ORDER BY " + ORDENES.get(orden, ORDENES["recientes"])
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(sql, params)
+    libros = cur.fetchall()
+    cur.close()
+    conn.close()
+    return libros
+
+
+def obtener_filtros():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM categorias ORDER BY nombre;")
+    categorias = cur.fetchall()
+    cur.execute("SELECT * FROM autores ORDER BY nombre;")
+    autores = cur.fetchall()
+    cur.close()
+    conn.close()
+    return categorias, autores
+###
+
 @libros_bp.route("/")
 def listar():
     conn = get_db_connection()

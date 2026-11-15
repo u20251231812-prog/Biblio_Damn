@@ -1,4 +1,5 @@
-from flask import Flask, render_template
+##Agregar 
+from flask import Flask, render_template, request
 from config import Config
 from db import get_db_connection
 
@@ -6,8 +7,10 @@ from db import get_db_connection
 from routes.categorias import categorias_bp
 from routes.autores import autores_bp
 from routes.estudiantes import estudiantes_bp
-from routes.libros import libros_bp
+from routes.libros import libros_bp, buscar_libros, obtener_filtros
 from routes.reservas import reservas_bp
+
+
 
 app = Flask(__name__)
 app.config.from_object(Config)
