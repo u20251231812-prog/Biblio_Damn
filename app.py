@@ -24,18 +24,17 @@ app.register_blueprint(reservas_bp, url_prefix="/reservas")
 
 @app.route("/")
 def index():
+    q = request.args.get("q", "").strip()
+    id_categoria = request.args.get("categoria", type=int)
+    id_autor = request.args.get("autor", type=int)
+    solo_disponibles = request.args.get("disponibles") == "1"
+    orden = request.args.get("orden", "recientes")
+
+    libros = buscar_libros(q, id_categoria, id_autor, solo_disponibles, orden)
+    categorias, autores = obtener_filtros()
+
     conn = get_db_connection()
     cur = conn.cursor()
-    # Trae libros para el catálogo visual con portada
-    cur.execute("""
-        SELECT l.*, a.nombre AS autor_nombre, c.nombre AS categoria_nombre
-        FROM libros l
-        JOIN autores a ON l.id_autor = a.id_autor
-        JOIN categorias c ON l.id_categoria = c.id_categoria
-        ORDER BY l.id_libro DESC;
-    """)
-    libros = cur.fetchall()
-
     # Trae reservas activas (Pendientes) para mostrar el QR en pantalla
     cur.execute("""
         SELECT r.*, l.titulo AS libro_titulo, l.portada_url, e.nombre AS estudiante_nombre
@@ -48,7 +47,14 @@ def index():
     reservas_activas = cur.fetchall()
     cur.close()
     conn.close()
-    return render_template("index.html", libros=libros, reservas_activas=reservas_activas)
+
+    return render_template(
+        "index.html",
+        libros=libros, reservas_activas=reservas_activas,
+        categorias=categorias, autores=autores,
+        q=q, id_categoria=id_categoria, id_autor=id_autor,
+        solo_disponibles=solo_disponibles, orden=orden,
+    )
 
 if __name__ == "__main__":
     app.run(debug=True, use_reloader=False)
