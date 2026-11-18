@@ -2,6 +2,7 @@
 from flask import Flask, render_template, request
 from config import Config
 from db import get_db_connection
+from flask import Flask, render_template, request, redirect, url_for, session
 
 # Importar Blueprints
 from routes.categorias import categorias_bp
@@ -9,7 +10,7 @@ from routes.autores import autores_bp
 from routes.estudiantes import estudiantes_bp
 from routes.libros import libros_bp, buscar_libros, obtener_filtros
 from routes.reservas import reservas_bp
-
+from routes.auth import auth_bp
 
 
 app = Flask(__name__)
@@ -21,6 +22,16 @@ app.register_blueprint(autores_bp, url_prefix="/autores")
 app.register_blueprint(estudiantes_bp, url_prefix="/estudiantes")
 app.register_blueprint(libros_bp, url_prefix="/libros")
 app.register_blueprint(reservas_bp, url_prefix="/reservas")
+app.register_blueprint(auth_bp)
+
+##Bloqueo de todas las páginas si no hay sesión
+@app.before_request
+def requerir_login():
+    if request.endpoint in (None, "static", "auth.login"):
+        return
+    if "id_estudiante" not in session:
+        return redirect(url_for("auth.login", next=request.full_path.rstrip("?")))
+
 
 @app.route("/")
 def index():

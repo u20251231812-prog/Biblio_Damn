@@ -18,6 +18,15 @@
                 <label class="form-label">Correo Institucional</label>
                 <input type="email" name="correo" class="form-control" value="{{ estudiante.correo if estudiante else '' }}" required>
             </div>
+            <div class="mb-3">
+                <label class="form-label">
+                    Contraseña
+                    {% if estudiante %}<small class="text-muted">(déjala vacía para no cambiarla)</small>{% endif %}
+                </label>
+                <input type="password" name="password" class="form-control"
+                    autocomplete="new-password" minlength="4"
+                    {% if not estudiante %}required{% endif %}>
+            </div>
             <button type="submit" class="btn btn-success">Guardar</button>
             <a href="{{ url_for('estudiantes.listar') }}" class="btn btn-secondary">Cancelar</a>
         </form>

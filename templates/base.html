@@ -71,10 +71,19 @@
         </li>
       </ul>
 
-      <a href="{{ url_for('reservas.escanear_qr') }}" class="btn btn-warning fw-semibold rounded-pill px-3 shadow-sm d-inline-flex align-items-center gap-2">
-        <i class="bi bi-qr-code-scan"></i>
-        <span>Validar QR</span>
-      </a>
+          <div class="d-flex align-items-center gap-2">
+        {% if session.get('nombre') %}
+          <span class="text-white small d-none d-xl-inline-flex align-items-center">
+            <i class="bi bi-person-circle me-1"></i>{{ session['nombre'] }}
+          </span>
+          <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-light btn-sm rounded-pill px-3">Salir</a>
+        {% endif %}
+
+        <a href="{{ url_for('reservas.escanear_qr') }}" class="btn btn-warning fw-semibold rounded-pill px-3 shadow-sm d-inline-flex align-items-center gap-2">
+          <i class="bi bi-qr-code-scan"></i>
+          <span>Validar QR</span>
+        </a>
+      </div>
     </div>
   </div>
 </nav>

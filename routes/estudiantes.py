@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 import psycopg2
 from db import get_db_connection
-
+from werkzeug.security import generate_password_hash
 estudiantes_bp = Blueprint("estudiantes", __name__)
 
 @estudiantes_bp.route("/")
@@ -20,22 +20,41 @@ def crear():
         codigo = request.form.get("codigo_estudiantil", "").strip()
         nombre = request.form.get("nombre", "").strip()
         correo = request.form.get("correo", "").strip()
-        if not codigo or not nombre or not correo:
+        password = request.form.get("password", "")
+
+        if not codigo or not nombre or not correo or not password:
             flash("Todos los campos son obligatorios.", "danger")
             return render_template("estudiantes/form.html", estudiante=None)
+
+        if len(password) < 4:
+            flash("La contraseña debe tener al menos 4 caracteres.", "danger")
+            return render_template("estudiantes/form.html", estudiante=None)
+
+        conn = get_db_connection()
+        cur = conn.cursor()
         try:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("INSERT INTO estudiantes (codigo_estudiantil, nombre, correo) VALUES (%s, %s, %s);", (codigo, nombre, correo))
-            conn.commit()
-            flash("Estudiante registrado.", "success")
-            return redirect(url_for("estudiantes.listar"))
+            # El nombre es el usuario para iniciar sesión, así que no puede repetirse
+            cur.execute(
+                "SELECT 1 FROM estudiantes WHERE LOWER(nombre) = LOWER(%s);",
+                (nombre,)
+            )
+            if cur.fetchone():
+                flash("Ya existe un estudiante con ese nombre.", "danger")
+            else:
+                cur.execute("""
+                    INSERT INTO estudiantes (codigo_estudiantil, nombre, correo, password_hash)
+                    VALUES (%s, %s, %s, %s);
+                """, (codigo, nombre, correo, generate_password_hash(password)))
+                conn.commit()
+                flash("Estudiante agregado.", "success")
+                return redirect(url_for("estudiantes.listar"))
         except psycopg2.IntegrityError:
             conn.rollback()
-            flash("Error: El código estudiantil o el correo ya están registrados.", "danger")
+            flash("El código estudiantil o el correo ya existe.", "danger")
         finally:
             cur.close()
             conn.close()
+
     return render_template("estudiantes/form.html", estudiante=None)
 
 @estudiantes_bp.route("/editar/<int:id>", methods=["GET", "POST"])
@@ -46,6 +65,22 @@ def editar(id):
         codigo = request.form.get("codigo_estudiantil", "").strip()
         nombre = request.form.get("nombre", "").strip()
         correo = request.form.get("correo", "").strip()
+        password = request.form.get("password", "")
+
+        if password:
+            cur.execute("""
+                UPDATE estudiantes
+                SET codigo_estudiantil=%s, nombre=%s, correo=%s, password_hash=%s
+                WHERE id_estudiante=%s;
+            """, (codigo, nombre, correo, generate_password_hash(password), id))
+        else:
+            cur.execute("""
+                UPDATE estudiantes
+                 SET codigo_estudiantil=%s, nombre=%s, correo=%s
+                WHERE id_estudiante=%s;
+            """, (codigo, nombre, correo, id))
+        conn.commit()
+
         if not codigo or not nombre or not correo:
             flash("Todos los campos son obligatorios.", "danger")
         else:
