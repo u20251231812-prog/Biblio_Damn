@@ -17,7 +17,7 @@ def login():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
-            "SELECT id_estudiante, nombre, password_hash FROM estudiantes WHERE LOWER(nombre) = LOWER(%s);",
+            "SELECT id_estudiante, nombre, password_hash, rol FROM estudiantes WHERE LOWER(nombre) = LOWER(%s);",
             (nombre,),
         )
         est = cur.fetchone()
@@ -28,6 +28,7 @@ def login():
             session.clear()
             session["id_estudiante"] = est["id_estudiante"]
             session["nombre"] = est["nombre"]
+            session["rol"] = est["rol"]
             siguiente = request.args.get("next", "")
             if siguiente.startswith("/") and not siguiente.startswith("//"):
                 return redirect(siguiente)

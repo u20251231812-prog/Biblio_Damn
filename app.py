@@ -3,6 +3,7 @@ from flask import Flask, render_template, request
 from config import Config
 from db import get_db_connection
 from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 
 # Importar Blueprints
 from routes.categorias import categorias_bp
@@ -11,7 +12,6 @@ from routes.estudiantes import estudiantes_bp
 from routes.libros import libros_bp, buscar_libros, obtener_filtros
 from routes.reservas import reservas_bp
 from routes.auth import auth_bp
-
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -24,6 +24,9 @@ app.register_blueprint(libros_bp, url_prefix="/libros")
 app.register_blueprint(reservas_bp, url_prefix="/reservas")
 app.register_blueprint(auth_bp)
 
+# Secciones que solo puede abrir un administrador
+BLUEPRINTS_ADMIN = {"categorias", "autores", "estudiantes", "libros", "reservas"}
+
 ##Bloqueo de todas las páginas si no hay sesión
 @app.before_request
 def requerir_login():
@@ -31,6 +34,9 @@ def requerir_login():
         return
     if "id_estudiante" not in session:
         return redirect(url_for("auth.login", next=request.full_path.rstrip("?")))
+    if request.blueprint in BLUEPRINTS_ADMIN and session.get("rol") != "admin":
+        flash("No tienes permiso para entrar a esa sección.", "danger")
+        return redirect(url_for("index"))
 
 
 @app.route("/")
@@ -46,15 +52,19 @@ def index():
 
     conn = get_db_connection()
     cur = conn.cursor()
-    # Trae reservas activas (Pendientes) para mostrar el QR en pantalla
-    cur.execute("""
+    sql = """
         SELECT r.*, l.titulo AS libro_titulo, l.portada_url, e.nombre AS estudiante_nombre
         FROM reservas r
         JOIN libros l ON r.id_libro = l.id_libro
         JOIN estudiantes e ON r.id_estudiante = e.id_estudiante
         WHERE r.estado = 'Pendiente'
-        ORDER BY r.id_reserva DESC LIMIT 3;
-    """)
+    """
+    params = []
+    if session.get("rol") != "admin":
+        sql += " AND r.id_estudiante = %s"
+        params.append(session["id_estudiante"])
+    sql += " ORDER BY r.id_reserva DESC LIMIT 3;"
+    cur.execute(sql, params)
     reservas_activas = cur.fetchall()
     cur.close()
     conn.close()

@@ -44,6 +44,8 @@
             <i class="bi bi-grid-1x2 me-1"></i> Catálogo y QR
           </a>
         </li>
+
+        {% if session.get('rol') == 'admin' %}
         <li class="nav-item">
           <a class="nav-link {% if request.blueprint == 'libros' %}active{% endif %}" href="{{ url_for('libros.listar') }}">
             <i class="bi bi-journal-bookmark me-1"></i> Libros
@@ -69,9 +71,10 @@
             <i class="bi bi-tags me-1"></i> Categorías
           </a>
         </li>
+        {% endif %}
       </ul>
 
-          <div class="d-flex align-items-center gap-2">
+      <div class="d-flex align-items-center gap-2">
         {% if session.get('nombre') %}
           <span class="text-white small d-none d-xl-inline-flex align-items-center">
             <i class="bi bi-person-circle me-1"></i>{{ session['nombre'] }}
@@ -79,10 +82,12 @@
           <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-light btn-sm rounded-pill px-3">Salir</a>
         {% endif %}
 
+        {% if session.get('rol') == 'admin' %}
         <a href="{{ url_for('reservas.escanear_qr') }}" class="btn btn-warning fw-semibold rounded-pill px-3 shadow-sm d-inline-flex align-items-center gap-2">
           <i class="bi bi-qr-code-scan"></i>
           <span>Validar QR</span>
         </a>
+        {% endif %}
       </div>
     </div>
   </div>

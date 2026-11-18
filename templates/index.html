@@ -199,7 +199,7 @@
 </div>
 {% endif %}
     </div>
-
+    
     <!-- Columna Derecha: Pase de Reserva QR -->
     <div class="col-lg-4">
         <div class="ticket-card p-4 sticky-top" style="top: 24px;">
@@ -234,9 +234,11 @@
                     <div class="font-monospace fw-bold fs-5 text-dark tracking-wide">{{ res.codigo_qr }}</div>
                     <p class="text-muted small mb-3">Muestra este código en el mostrador para retirar tu ejemplar.</p>
 
+                    {% if session.get('rol') == 'admin' %}
                     <a href="{{ url_for('reservas.listar') }}" class="btn btn-outline-secondary btn-sm w-100 rounded-3">
                         Ver historial completo ({{ reservas_activas|length }})
                     </a>
+                    {% endif %}
                 </div>
             {% else %}
                 <div class="text-center py-5">
