@@ -1,0 +1,108 @@
+-- ==========================================================
+-- BASE DE DATOS: BIBLIOTECA DIGITAL UNIVERSITARIA (3FN)
+-- ==========================================================
+
+-- 1. Creación de Tablas Normalizadas
+CREATE TABLE IF NOT EXISTS categorias (
+    id_categoria SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS autores (
+    id_autor SERIAL PRIMARY KEY,
+    nombre VARCHAR(150) NOT NULL,
+    nacionalidad VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS estudiantes (
+    id_estudiante SERIAL PRIMARY KEY,
+    codigo_estudiantil VARCHAR(30) NOT NULL UNIQUE,
+    nombre VARCHAR(150) NOT NULL,
+    correo VARCHAR(150) NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS libros (
+    id_libro SERIAL PRIMARY KEY,
+    titulo VARCHAR(200) NOT NULL,
+    portada_url TEXT NOT NULL,
+    stock_disponible INT NOT NULL DEFAULT 1 CHECK (stock_disponible >= 0),
+    id_categoria INT NOT NULL REFERENCES categorias(id_categoria) ON DELETE RESTRICT,
+    id_autor INT NOT NULL REFERENCES autores(id_autor) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS reservas (
+    id_reserva SERIAL PRIMARY KEY,
+    id_estudiante INT NOT NULL REFERENCES estudiantes(id_estudiante) ON DELETE RESTRICT,
+    id_libro INT NOT NULL REFERENCES libros(id_libro) ON DELETE RESTRICT,
+    codigo_qr VARCHAR(50) NOT NULL UNIQUE,
+    estado VARCHAR(20) NOT NULL DEFAULT 'Pendiente' CHECK (estado IN ('Pendiente', 'Reclamado', 'Devuelto')),
+    fecha_reserva TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. Inserción de Datos Iniciales (10+ registros por entidad)
+INSERT INTO categorias (nombre) VALUES
+('Realismo Mágico'),
+('Ciencia Ficción'),
+('Fantasía'),
+('Clásicos'),
+('Cuentos'),
+('Terror'),
+('Programación'),
+('Historia'),
+('Filosofía'),
+('Divulgación Científica')
+ON CONFLICT (nombre) DO NOTHING;
+
+INSERT INTO autores (nombre, nacionalidad) VALUES
+('Gabriel García Márquez', 'Colombiana'),
+('George Orwell', 'Británica'),
+('J.K. Rowling', 'Británica'),
+('Miguel de Cervantes', 'Española'),
+('Antoine de Saint-Exupéry', 'Francesa'),
+('Jorge Luis Borges', 'Argentina'),
+('Isaac Asimov', 'Estadounidense'),
+('Stephen King', 'Estadounidense'),
+('Robert C. Martin', 'Estadounidense'),
+('Julio Cortázar', 'Argentina');
+
+INSERT INTO estudiantes (codigo_estudiantil, nombre, correo) VALUES
+('EST-2026-001', 'Daniel Castro', 'daniel.castro@universidad.edu.co'),
+('EST-2026-002', 'Valentina Díaz', 'valentina.diaz@universidad.edu.co'),
+('EST-2026-003', 'Sofía Martínez', 'sofia.martinez@universidad.edu.co'),
+('EST-2026-004', 'Mateo Rodríguez', 'mateo.rodriguez@universidad.edu.co'),
+('EST-2026-005', 'Camila Gómez', 'camila.gomez@universidad.edu.co'),
+('EST-2026-006', 'Sebastián López', 'sebastian.lopez@universidad.edu.co'),
+('EST-2026-007', 'Isabella Torres', 'isabella.torres@universidad.edu.co'),
+('EST-2026-008', 'Alejandro Ruiz', 'alejandro.ruiz@universidad.edu.co'),
+('EST-2026-009', 'Mariana Vargas', 'mariana.vargas@universidad.edu.co'),
+('EST-2026-010', 'Nicolás Herrera', 'nicolas.herrera@universidad.edu.co')
+ON CONFLICT (codigo_estudiantil) DO NOTHING;
+
+INSERT INTO libros (titulo, portada_url, stock_disponible, id_categoria, id_autor) VALUES
+('Cien años de soledad', 'https://m.media-amazon.com/images/I/91TvVQS7loL._SL1500_.jpg', 5, 1, 1),
+('1984', 'https://m.media-amazon.com/images/I/71rpa1-kyvL._SL1500_.jpg', 3, 2, 2),
+('Harry Potter y la piedra filosofal', 'https://upload.wikimedia.org/wikipedia/en/6/6b/Harry_Potter_and_the_Philosopher%27s_Stone_Book_Cover.jpg', 4, 3, 3),
+('Don Quijote de la Mancha', 'https://upload.wikimedia.org/wikipedia/commons/b/ba/Title_page_first_edition_Don_Quijote.jpg', 2, 4, 4),
+('El Principito', 'https://upload.wikimedia.org/wikipedia/en/0/05/Littleprince.JPG', 6, 3, 5),
+('El Aleph', 'https://m.media-amazon.com/images/I/81t2CVWEsUL._SL1500_.jpg', 3, 5, 6),
+('Fundación', 'https://m.media-amazon.com/images/I/91dSMhdIzTL._SL1500_.jpg', 4, 2, 7),
+('El Resplandor', 'https://m.media-amazon.com/images/I/81nwnHTcV2L._SL1500_.jpg', 2, 6, 8),
+('Clean Code', 'https://m.media-amazon.com/images/I/51E2055ZGUL._SL1000_.jpg', 5, 7, 9),
+('Rayuela', 'https://m.media-amazon.com/images/I/81WcnNQ-TBL._SL1500_.jpg', 3, 1, 10);
+
+INSERT INTO reservas (id_estudiante, id_libro, codigo_qr, estado) VALUES
+(1, 9, 'QR-RES-1009', 'Pendiente'),
+(2, 6, 'QR-RES-1006', 'Pendiente'),
+(3, 4, 'QR-RES-1004', 'Pendiente'),
+(4, 1, 'QR-RES-1001', 'Reclamado'),
+(5, 2, 'QR-RES-1002', 'Devuelto'),
+(6, 3, 'QR-RES-1003', 'Reclamado'),
+(7, 5, 'QR-RES-1005', 'Devuelto'),
+(8, 7, 'QR-RES-1007', 'Reclamado'),
+(9, 8, 'QR-RES-1008', 'Devuelto'),
+(10, 10, 'QR-RES-1010', 'Reclamado')
+ON CONFLICT (codigo_qr) DO NOTHING;                                                                                                                                 ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);                                                                                                                              ALTER TABLE estudiantes                                                                                                                                                                                      
+ADD COLUMN IF NOT EXISTS rol VARCHAR(20) NOT NULL DEFAULT 'estudiante'
+CHECK (rol IN ('estudiante', 'admin'));
+
+UPDATE estudiantes SET rol = 'admin' WHERE nombre = 'Carlos Ruiz';
