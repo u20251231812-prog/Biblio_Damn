@@ -13,7 +13,7 @@
       font-family: 'Inter', system-ui, sans-serif;
       background: linear-gradient(135deg, #0f172a, #1e3a8a);
     }
-    .login-card { width: 100%; max-width: 400px; border-radius: 16px; background: #fff; }
+    .login-card { width: 100%; max-width: 420px; border-radius: 16px; background: #fff; }
     .btn-brand { background: #facc15; border-color: #facc15; color: #0f172a; font-weight: 600; }
     .btn-brand:hover { background: #eab308; border-color: #eab308; color: #0f172a; }
   </style>
@@ -23,7 +23,9 @@
     <div class="text-center mb-4">
       <i class="bi bi-book-half fs-1 text-primary"></i>
       <h4 class="fw-bold mt-2 mb-1">Biblioteca Digital</h4>
-      <p class="text-muted small mb-0">Inicia sesión para continuar</p>
+      <p class="text-muted small mb-0">
+        {{ 'Crea tu cuenta de estudiante' if modo == 'registro' else 'Inicia sesión para continuar' }}
+      </p>
     </div>
 
     {% with mensajes = get_flashed_messages(with_categories=true) %}
@@ -32,17 +34,52 @@
       {% endfor %}
     {% endwith %}
 
-    <form method="post">
-      <div class="mb-3">
-        <label class="form-label small fw-semibold">Usuario (tu nombre)</label>
-        <input type="text" name="nombre" class="form-control" required autofocus autocomplete="username">
-      </div>
-      <div class="mb-4">
-        <label class="form-label small fw-semibold">Contraseña</label>
-        <input type="password" name="password" class="form-control" required autocomplete="current-password">
-      </div>
-      <button type="submit" class="btn btn-brand w-100 py-2">Entrar</button>
-    </form>
+    {% if modo == 'registro' %}
+      <form method="post" action="{{ url_for('auth.registro') }}">
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Código estudiantil</label>
+          <input type="text" name="codigo_estudiantil" class="form-control" required autofocus
+                 value="{{ datos.codigo_estudiantil if datos else '' }}">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Nombre completo (será tu usuario)</label>
+          <input type="text" name="nombre" class="form-control" required autocomplete="username"
+                 value="{{ datos.nombre if datos else '' }}">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Correo institucional</label>
+          <input type="email" name="correo" class="form-control" required autocomplete="email"
+                 value="{{ datos.correo if datos else '' }}">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Contraseña</label>
+          <input type="password" name="password" class="form-control" required minlength="4" autocomplete="new-password">
+        </div>
+        <div class="mb-4">
+          <label class="form-label small fw-semibold">Confirmar contraseña</label>
+          <input type="password" name="confirmar" class="form-control" required minlength="4" autocomplete="new-password">
+        </div>
+        <button type="submit" class="btn btn-brand w-100 py-2">Crear cuenta</button>
+      </form>
+      <p class="text-center small text-muted mt-3 mb-0">
+        ¿Ya tienes cuenta? <a href="{{ url_for('auth.login') }}">Inicia sesión</a>
+      </p>
+    {% else %}
+      <form method="post">
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Usuario (tu nombre)</label>
+          <input type="text" name="nombre" class="form-control" required autofocus autocomplete="username">
+        </div>
+        <div class="mb-4">
+          <label class="form-label small fw-semibold">Contraseña</label>
+          <input type="password" name="password" class="form-control" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-brand w-100 py-2">Entrar</button>
+      </form>
+      <p class="text-center small text-muted mt-3 mb-0">
+        ¿No tienes cuenta? <a href="{{ url_for('auth.registro') }}">Regístrate</a>
+      </p>
+    {% endif %}
   </div>
 </body>
 </html>

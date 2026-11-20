@@ -27,6 +27,8 @@ RUTAS_ADMIN_RESERVAS = {"reservas.listar", "reservas.editar", "reservas.escanear
 # Bloqueo de todas las páginas si no hay sesión
 @app.before_request
 def requerir_login():
+    if request.endpoint in (None, "static", "auth.login", "auth.registro"):
+        return
     if request.endpoint in (None, "static", "auth.login"):
         return
     if "id_estudiante" not in session:
