@@ -1,46 +1,115 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="card shadow-sm col-md-6 mx-auto">
-    <div class="card-header bg-primary text-white fw-bold">
-        {{ 'Editar Reserva' if reserva else 'Nueva Reserva de Libro' }}
-    </div>
-    <div class="card-body">
-        <form method="POST">
-            <div class="mb-3">
-                <label class="form-label">Estudiante</label>
-                <select name="id_estudiante" class="form-select" required>
-                    <option value="">-- Seleccione un estudiante --</option>
-                    {% for e in estudiantes %}
-                    <option value="{{ e.id_estudiante }}" {% if reserva and reserva.id_estudiante == e.id_estudiante %}selected{% endif %}>
-                        {{ e.codigo_estudiantil }} - {{ e.nombre }}
-                    </option>
-                    {% endfor %}
-                </select>
+<div class="row justify-content-center">
+    <div class="col-md-7 col-lg-6">
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+            <div class="card-header bg-primary text-white py-3">
+                <h5 class="mb-0 fw-bold">
+                    {{ 'Editar Reserva' if reserva else 'Nueva Reserva de Libro' }}
+                </h5>
             </div>
-            <div class="mb-3">
-                <label class="form-label">Libro</label>
-                <select name="id_libro" class="form-select" required>
-                    <option value="">-- Seleccione un libro --</option>
-                    {% for l in libros %}
-                    <option value="{{ l.id_libro }}" {% if reserva and reserva.id_libro == l.id_libro %}selected{% endif %}>
-                        {{ l.titulo }} (Disponibles: {{ l.stock_disponible }})
-                    </option>
-                    {% endfor %}
-                </select>
+            <div class="card-body p-4">
+                <form method="post" id="formReserva">
+                    <!-- Estudiante -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Estudiante</label>
+                        {% if session.get('rol') == 'admin' %}
+                            <select name="id_estudiante" class="form-select" required>
+                                <option value="">-- Seleccione un estudiante --</option>
+                                {% for e in estudiantes %}
+                                    <option value="{{ e.id_estudiante }}"
+                                        {{ 'selected' if reserva and reserva.id_estudiante == e.id_estudiante }}>
+                                        {{ e.codigo_estudiantil }} - {{ e.nombre }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        {% else %}
+                            <input type="text" class="form-control bg-light" value="{{ session.get('nombre') }}" readonly>
+                        {% endif %}
+                    </div>
+
+                    <!-- Libro: Un solo buscador con autocompletado -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Libro</label>
+
+                        {% set ns = namespace(texto_inicial='', id_inicial='') %}
+                        {% for l in libros %}
+                            {% if (reserva and reserva.id_libro == l.id_libro) or (libro_preseleccionado == l.id_libro) %}
+                                {% set ns.texto_inicial = l.titulo ~ ' (Disponibles: ' ~ l.stock_disponible ~ ')' %}
+                                {% set ns.id_inicial = l.id_libro %}
+                            {% endif %}
+                        {% endfor %}
+
+                        <div class="input-group">
+                            <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text"
+                                   id="buscadorLibro"
+                                   list="listaLibros"
+                                   class="form-control"
+                                   placeholder="Escribe el nombre del libro..."
+                                   value="{{ ns.texto_inicial }}"
+                                   autocomplete="off"
+                                   required>
+                        </div>
+
+                        <!-- Campo oculto que envía el id_libro real a Flask -->
+                        <input type="hidden" name="id_libro" id="idLibroOculto" value="{{ ns.id_inicial }}">
+
+                        <datalist id="listaLibros">
+                            {% for l in libros %}
+                                <option data-id="{{ l.id_libro }}" value="{{ l.titulo }} (Disponibles: {{ l.stock_disponible }})"></option>
+                            {% endfor %}
+                        </datalist>
+                    </div>
+
+                    <!-- Estado: solo visible para admin al editar -->
+                    {% if reserva and session.get('rol') == 'admin' %}
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Estado</label>
+                        <select name="estado" class="form-select" required>
+                            <option value="Pendiente" {{ 'selected' if reserva.estado == 'Pendiente' }}>Pendiente</option>
+                            <option value="Reclamado" {{ 'selected' if reserva.estado == 'Reclamado' }}>Reclamado</option>
+                            <option value="Devuelto" {{ 'selected' if reserva.estado == 'Devuelto' }}>Devuelto</option>
+                        </select>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex gap-2 pt-2">
+                        <button type="submit" class="btn btn-success px-4">Guardar</button>
+                        <a href="{{ url_for('reservas.listar') if session.get('rol') == 'admin' else url_for('index') }}"
+                           class="btn btn-secondary px-4">Cancelar</a>
+                    </div>
+                </form>
             </div>
-            {% if reserva %}
-            <div class="mb-3">
-                <label class="form-label">Estado</label>
-                <select name="estado" class="form-select" required>
-                    <option value="Pendiente" {% if reserva.estado == 'Pendiente' %}selected{% endif %}>Pendiente</option>
-                    <option value="Reclamado" {% if reserva.estado == 'Reclamado' %}selected{% endif %}>Reclamado</option>
-                    <option value="Devuelto" {% if reserva.estado == 'Devuelto' %}selected{% endif %}>Devuelto</option>
-                </select>
-            </div>
-            {% endif %}
-            <button type="submit" class="btn btn-success">Guardar</button>
-            <a href="{{ url_for('reservas.listar') }}" class="btn btn-secondary">Cancelar</a>
-        </form>
+        </div>
     </div>
 </div>
+
+<script>
+    const inputBuscador = document.getElementById('buscadorLibro');
+    const inputIdOculto = document.getElementById('idLibroOculto');
+    const opciones = document.querySelectorAll('#listaLibros option');
+
+    function sincronizarIdLibro() {
+        const valor = inputBuscador.value.trim();
+        let encontrado = '';
+        opciones.forEach(op => {
+            if (op.value === valor) {
+                encontrado = op.dataset.id;
+            }
+        });
+        inputIdOculto.value = encontrado;
+    }
+
+    inputBuscador.addEventListener('input', sincronizarIdLibro);
+
+    document.getElementById('formReserva').addEventListener('submit', function(e) {
+        sincronizarIdLibro();
+        if (!inputIdOculto.value) {
+            e.preventDefault();
+            alert('Por favor selecciona un libro válido de la lista desplegable.');
+            inputBuscador.focus();
+        }
+    });
+</script>
 {% endblock %}

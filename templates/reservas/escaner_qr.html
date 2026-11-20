@@ -1,19 +1,166 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card shadow">
-            <div class="card-header bg-warning fw-bold">Panel Bibliotecaria: Validar Entrega de Libro</div>
-            <div class="card-body">
-                <form method="POST">
-                    <div class="mb-3">
-                        <label class="form-label">Escanea o digita el Código QR del Estudiante:</label>
-                        <input type="text" name="codigo_qr" class="form-control form-control-lg" placeholder="Ej: QR-RES-1001" required autofocus>
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-4">
+    <div>
+        <span class="text-uppercase text-primary fw-semibold small" style="letter-spacing: 0.08em;">Mostrador de Préstamos</span>
+        <h3 class="fw-bold mb-0 mt-1">Validación y Entrega de Libros</h3>
+    </div>
+    <a href="{{ url_for('reservas.listar') }}" class="btn btn-outline-secondary btn-sm rounded-3 px-3">
+        <i class="bi bi-list-ul me-1"></i> Ver todas las reservas
+    </a>
+</div>
+
+<div class="row g-4">
+    <!-- Columna Izquierda: Escáner QR + Código Manual -->
+    <div class="col-lg-5">
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden h-100">
+            <div class="card-header bg-dark text-white py-3 d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-qr-code-scan text-warning fs-5"></i>
+                    <h6 class="mb-0 fw-bold">Lector de Pase QR</h6>
+                </div>
+                <span class="badge bg-warning text-dark">Mostrador</span>
+            </div>
+
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <!-- Área de cámara con placeholder visual -->
+                <div class="text-center mb-3">
+                    <div id="placeholderCamara" class="border border-2 border-dashed rounded-4 p-4 bg-light text-muted">
+                        <i class="bi bi-camera fs-1 d-block mb-2 text-secondary"></i>
+                        <p class="small mb-3">Activa la cámara para escanear el código QR desde el celular del estudiante.</p>
+                        <button type="button" id="btnCamara" class="btn btn-primary btn-sm px-4 rounded-pill">
+                            <i class="bi bi-camera-video me-1"></i> Activar Cámara
+                        </button>
                     </div>
-                    <button type="submit" class="btn btn-success w-100">Confirmar Reclamo y Descontar Stock</button>
-                </form>
+
+                    <div id="contenedorVideo" class="d-none">
+                        <div id="lectorQR" class="rounded-4 overflow-hidden border bg-dark mb-2"></div>
+                        <button type="button" id="btnDetener" class="btn btn-outline-danger btn-sm px-3 rounded-pill">
+                            <i class="bi bi-stop-circle me-1"></i> Detener Cámara
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="d-flex align-items-center my-3">
+                        <hr class="flex-grow-1">
+                        <span class="px-2 text-muted small">o ingresa el código</span>
+                        <hr class="flex-grow-1">
+                    </div>
+
+                    <form method="post" id="formEscaner">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white"><i class="bi bi-upc-scan text-muted"></i></span>
+                            <input type="text"
+                                   name="codigo_qr"
+                                   id="inputCodigoQR"
+                                   class="form-control font-monospace text-uppercase"
+                                   placeholder="QR-A1B2C3D4"
+                                   required
+                                   autofocus>
+                            <button type="submit" class="btn btn-dark fw-semibold px-4">Validar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Columna Derecha: Cola de Reservas Pendientes por Entregar -->
+    <div class="col-lg-7">
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden h-100">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-0 fw-bold">Reservas Pendientes por Retirar</h6>
+                    <small class="text-muted">Estudiantes con pase activo esperando entrega</small>
+                </div>
+                <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">
+                    {{ pendientes|length }} en espera
+                </span>
+            </div>
+
+            <div class="card-body p-0">
+                {% if pendientes %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light small text-uppercase text-muted">
+                            <tr>
+                                <th class="ps-4">Estudiante</th>
+                                <th>Libro</th>
+                                <th>Código</th>
+                                <th class="text-end pe-4">Acción rápida</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in pendientes %}
+                            <tr>
+                                <td class="ps-4 fw-medium">{{ p.estudiante_nombre }}</td>
+                                <td class="text-muted small">{{ p.libro_titulo }}</td>
+                                <td><span class="badge bg-light text-dark border font-monospace">{{ p.codigo_qr }}</span></td>
+                                <td class="text-end pe-4">
+                                    <form method="post" class="d-inline">
+                                        <input type="hidden" name="codigo_qr" value="{{ p.codigo_qr }}">
+                                        <button type="submit" class="btn btn-success btn-sm rounded-3 px-3"
+                                                onclick="return confirm('¿Confirmar entrega de {{ p.libro_titulo }} a {{ p.estudiante_nombre }}?');">
+                                            <i class="bi bi-check2-circle me-1"></i> Entregar
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5 px-3">
+                    <i class="bi bi-inbox fs-1 text-muted opacity-50"></i>
+                    <h6 class="fw-semibold mt-3 mb-1">No hay entregas pendientes</h6>
+                    <p class="text-muted small mb-0">Cuando un estudiante reserve un libro, aparecerá aquí listo para validar.</p>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
+
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<script>
+    const btnCamara = document.getElementById('btnCamara');
+    const btnDetener = document.getElementById('btnDetener');
+    const placeholderCamara = document.getElementById('placeholderCamara');
+    const contenedorVideo = document.getElementById('contenedorVideo');
+    const inputQR = document.getElementById('inputCodigoQR');
+    const formEscaner = document.getElementById('formEscaner');
+    let html5QrCode = null;
+
+    btnCamara.addEventListener('click', async () => {
+        placeholderCamara.classList.add('d-none');
+        contenedorVideo.classList.remove('d-none');
+
+        html5QrCode = new Html5Qrcode("lectorQR");
+        try {
+            await html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 220, height: 220 } },
+                (textoLeido) => {
+                    inputQR.value = textoLeido.trim().toUpperCase();
+                    html5QrCode.stop();
+                    formEscaner.submit();
+                }
+            );
+        } catch (err) {
+            alert("No se pudo acceder a la cámara. Verifica los permisos del navegador.");
+            contenedorVideo.classList.add('d-none');
+            placeholderCamara.classList.remove('d-none');
+        }
+    });
+
+    btnDetener.addEventListener('click', async () => {
+        if (html5QrCode) {
+            await html5QrCode.stop();
+        }
+        contenedorVideo.classList.add('d-none');
+        placeholderCamara.classList.remove('d-none');
+    });
+</script>
 {% endblock %}
