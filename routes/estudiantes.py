@@ -67,31 +67,31 @@ def editar(id):
         correo = request.form.get("correo", "").strip()
         password = request.form.get("password", "")
 
-        if password:
-            cur.execute("""
-                UPDATE estudiantes
-                SET codigo_estudiantil=%s, nombre=%s, correo=%s, password_hash=%s
-                WHERE id_estudiante=%s;
-            """, (codigo, nombre, correo, generate_password_hash(password), id))
-        else:
-            cur.execute("""
-                UPDATE estudiantes
-                 SET codigo_estudiantil=%s, nombre=%s, correo=%s
-                WHERE id_estudiante=%s;
-            """, (codigo, nombre, correo, id))
-        conn.commit()
-
         if not codigo or not nombre or not correo:
             flash("Todos los campos son obligatorios.", "danger")
+        elif password and len(password) < 4:
+            flash("La contraseña debe tener al menos 4 caracteres.", "danger")
         else:
             try:
-                cur.execute("UPDATE estudiantes SET codigo_estudiantil=%s, nombre=%s, correo=%s WHERE id_estudiante=%s;", (codigo, nombre, correo, id))
+                if password:
+                    cur.execute("""
+                        UPDATE estudiantes
+                        SET codigo_estudiantil=%s, nombre=%s, correo=%s, password_hash=%s
+                        WHERE id_estudiante=%s;
+                    """, (codigo, nombre, correo, generate_password_hash(password), id))
+                else:
+                    cur.execute("""
+                        UPDATE estudiantes
+                        SET codigo_estudiantil=%s, nombre=%s, correo=%s
+                        WHERE id_estudiante=%s;
+                    """, (codigo, nombre, correo, id))
                 conn.commit()
                 flash("Estudiante actualizado.", "success")
                 return redirect(url_for("estudiantes.listar"))
             except psycopg2.IntegrityError:
                 conn.rollback()
                 flash("Error: Código o correo duplicado.", "danger")
+
     cur.execute("SELECT * FROM estudiantes WHERE id_estudiante = %s;", (id,))
     estudiante = cur.fetchone()
     cur.close()

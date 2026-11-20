@@ -1,9 +1,11 @@
 import uuid
+from datetime import date, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 import psycopg2
 from db import get_db_connection
 
 reservas_bp = Blueprint("reservas", __name__)
+
 
 def obtener_reservas_activas(id_estudiante=None, es_admin=False):
     conn = get_db_connection()
@@ -14,7 +16,7 @@ def obtener_reservas_activas(id_estudiante=None, es_admin=False):
         FROM reservas r
         JOIN estudiantes e ON r.id_estudiante = e.id_estudiante
         JOIN libros l ON r.id_libro = l.id_libro
-        WHERE r.estado = 'Pendiente'
+        WHERE r.estado IN ('Pendiente', 'Reclamado')
     """
     params = []
 
@@ -54,6 +56,7 @@ def crear():
     cur = conn.cursor()
     es_admin = session.get("rol") == "admin"
     libro_preseleccionado = request.args.get("libro", type=int)
+    fecha_limite = date.today() + timedelta(days=30)
 
     if request.method == "POST":
         id_estudiante = request.form.get("id_estudiante") if es_admin else session.get("id_estudiante")
@@ -64,26 +67,43 @@ def crear():
             flash("Debe seleccionar estudiante y libro.", "danger")
         else:
             try:
-                # Verificar cupo real: stock físico menos las reservas pendientes actuales
+                # 1. Máximo 2 reservas o préstamos activos por estudiante
                 cur.execute("""
-                    SELECT l.stock_disponible - COUNT(r.id_reserva) AS cupo_real
-                    FROM libros l
-                    LEFT JOIN reservas r ON l.id_libro = r.id_libro AND r.estado = 'Pendiente'
-                    WHERE l.id_libro = %s
-                    GROUP BY l.id_libro, l.stock_disponible;
-                """, (id_libro,))
-                resultado = cur.fetchone()
-
-                if not resultado or resultado["cupo_real"] <= 0:
-                    flash("No hay ejemplares disponibles: los que quedan ya están reservados por otros estudiantes.", "warning")
+                    SELECT COUNT(*) AS total
+                    FROM reservas
+                    WHERE id_estudiante = %s AND estado IN ('Pendiente', 'Reclamado');
+                """, (id_estudiante,))
+                if cur.fetchone()["total"] >= 2:
+                    flash("Límite alcanzado: solo puedes tener máximo 2 libros reservados o en préstamo al mismo tiempo.", "warning")
                 else:
+                    # 2. No permitir reservar el mismo libro si ya tiene uno activo
                     cur.execute("""
-                        INSERT INTO reservas (id_estudiante, id_libro, codigo_qr, estado)
-                        VALUES (%s, %s, %s, 'Pendiente');
-                    """, (id_estudiante, id_libro, codigo_qr))
-                    conn.commit()
-                    flash(f"Reserva creada. Código QR generado: {codigo_qr}", "success")
-                    return redirect(url_for("index"))
+                        SELECT 1 FROM reservas
+                        WHERE id_estudiante = %s AND id_libro = %s AND estado IN ('Pendiente', 'Reclamado');
+                    """, (id_estudiante, id_libro))
+                    if cur.fetchone():
+                        flash("Ya tienes una reserva o préstamo activo de este mismo libro.", "warning")
+                    else:
+                        # 3. Verificar cupo real: stock físico menos las reservas pendientes actuales
+                        cur.execute("""
+                            SELECT l.stock_disponible - COUNT(r.id_reserva) AS cupo_real
+                            FROM libros l
+                            LEFT JOIN reservas r ON l.id_libro = r.id_libro AND r.estado = 'Pendiente'
+                            WHERE l.id_libro = %s
+                            GROUP BY l.id_libro, l.stock_disponible;
+                        """, (id_libro,))
+                        resultado = cur.fetchone()
+
+                        if not resultado or resultado["cupo_real"] <= 0:
+                            flash("No hay ejemplares disponibles: los que quedan ya están reservados por otros estudiantes.", "warning")
+                        else:
+                            cur.execute("""
+                                INSERT INTO reservas (id_estudiante, id_libro, codigo_qr, estado, fecha_vencimiento)
+                                VALUES (%s, %s, %s, 'Pendiente', %s);
+                            """, (id_estudiante, id_libro, codigo_qr, fecha_limite))
+                            conn.commit()
+                            flash(f"Reserva creada (vence el {fecha_limite.strftime('%d/%m/%Y')}). Código QR generado: {codigo_qr}", "success")
+                            return redirect(url_for("index"))
             except psycopg2.Error as e:
                 conn.rollback()
                 flash(f"Error en base de datos: {e}", "danger")
@@ -110,7 +130,8 @@ def crear():
         reserva=None,
         estudiantes=estudiantes,
         libros=libros,
-        libro_preseleccionado=libro_preseleccionado
+        libro_preseleccionado=libro_preseleccionado,
+        fecha_limite=fecha_limite.strftime("%d/%m/%Y")
     )
 
 
@@ -142,7 +163,7 @@ def editar(id):
     libros = cur.fetchall()
     cur.close()
     conn.close()
-    return render_template("reservas/form.html", reserva=reserva, estudiantes=estudiantes, libros=libros, libro_preseleccionado=None)
+    return render_template("reservas/form.html", reserva=reserva, estudiantes=estudiantes, libros=libros, libro_preseleccionado=None, fecha_limite=None)
 
 
 @reservas_bp.route("/eliminar/<int:id>", methods=["POST"])
@@ -158,8 +179,11 @@ def eliminar(id):
         else:
             cur.execute("DELETE FROM reservas WHERE id_reserva = %s;", (id,))
 
-        conn.commit()
-        flash("Reserva cancelada correctamente.", "success")
+        if cur.rowcount == 0:
+            flash("No se pudo cancelar la reserva (ya fue reclamada o no existe).", "warning")
+        else:
+            conn.commit()
+            flash("Reserva cancelada correctamente.", "success")
     except psycopg2.IntegrityError:
         conn.rollback()
         flash("No se puede eliminar la reserva.", "danger")
@@ -170,6 +194,7 @@ def eliminar(id):
     if session.get("rol") != "admin":
         return redirect(url_for("index"))
     return redirect(url_for("reservas.listar"))
+
 
 @reservas_bp.route("/devolver/<int:id>", methods=["POST"])
 def devolver(id):
@@ -197,6 +222,7 @@ def devolver(id):
 
     return redirect(url_for("reservas.listar"))
 
+
 @reservas_bp.route("/escanear", methods=["GET", "POST"])
 def escanear_qr():
     if request.method == "POST":
@@ -219,10 +245,17 @@ def escanear_qr():
             elif reserva["stock_disponible"] <= 0:
                 flash("No se puede entregar: este libro ya no tiene unidades disponibles en inventario.", "danger")
             else:
-                cur.execute("UPDATE reservas SET estado = 'Reclamado' WHERE id_reserva = %s;", (reserva["id_reserva"],))
-                cur.execute("UPDATE libros SET stock_disponible = stock_disponible - 1 WHERE id_libro = %s;", (reserva["id_libro"],))
+                fecha_vencimiento = date.today() + timedelta(days=30)
+                cur.execute(
+                    "UPDATE reservas SET estado = 'Reclamado', fecha_vencimiento = %s WHERE id_reserva = %s;",
+                    (fecha_vencimiento, reserva["id_reserva"])
+                )
+                cur.execute(
+                    "UPDATE libros SET stock_disponible = stock_disponible - 1 WHERE id_libro = %s;",
+                    (reserva["id_libro"],)
+                )
                 conn.commit()
-                flash("¡Libro entregado con éxito! Estado actualizado a Reclamado.", "success")
+                flash(f"¡Libro entregado con éxito! Fecha límite de devolución: {fecha_vencimiento.strftime('%d/%m/%Y')}.", "success")
         except psycopg2.Error:
             conn.rollback()
             flash("No se pudo completar la entrega por falta de stock disponible.", "danger")
@@ -230,5 +263,18 @@ def escanear_qr():
             cur.close()
             conn.close()
 
-    pendientes = obtener_reservas_activas(es_admin=True)
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT r.*, e.nombre AS estudiante_nombre, l.titulo AS libro_titulo
+        FROM reservas r
+        JOIN estudiantes e ON r.id_estudiante = e.id_estudiante
+        JOIN libros l ON r.id_libro = l.id_libro
+        WHERE r.estado = 'Pendiente'
+        ORDER BY r.id_reserva DESC;
+    """)
+    pendientes = cur.fetchall()
+    cur.close()
+    conn.close()
+
     return render_template("reservas/escaner_qr.html", pendientes=pendientes)
